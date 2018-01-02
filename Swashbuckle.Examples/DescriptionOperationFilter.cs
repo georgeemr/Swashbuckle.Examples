@@ -5,6 +5,8 @@ using System.Linq;
 using System.Web.Http.Description;
 using Swashbuckle.Swagger;
 using Swashbuckle.Swagger.Annotations;
+using System.Reflection;
+using Newtonsoft.Json;
 
 namespace Swashbuckle.Examples
 {
@@ -45,29 +47,27 @@ namespace Swashbuckle.Examples
 
         private static void RecursivelyParseDescriptions(SchemaRegistry schemaRegistry, Type propType)
         {
-            var definition = schemaRegistry.Definitions[propType.Name];
-
-            var propertiesWithDescription = propType.GetProperties()
-                .Where(prop => prop.IsDefined(typeof(DescriptionAttribute), false));
-
-            foreach (var prop in propertiesWithDescription)
+            Schema definition = schemaRegistry.Definitions[propType.Name];
+            foreach (PropertyInfo propertyInfo in propType.GetProperties().Where(prop => prop.IsDefined(typeof(DescriptionAttribute), false)))
             {
-                var descriptionAttribute =
-                    (DescriptionAttribute)prop.GetCustomAttributes(typeof(DescriptionAttribute), false)
-                        .First();
-                definition.properties[prop.Name].description = descriptionAttribute.Description;
-            }
-
-            //iterate children that are in this assembly
-            var allProperties = propType.GetProperties()
-                .Where(prop => prop.PropertyType.Assembly == propType.Assembly);
-
-            foreach (var prop in allProperties)
-            {
-                if (schemaRegistry.Definitions.ContainsKey(prop.Name))
+                DescriptionAttribute descriptionAttribute = (DescriptionAttribute)propertyInfo.GetCustomAttributes(typeof(DescriptionAttribute), false).First();
+                if (definition.properties.ContainsKey(propertyInfo.Name))
                 {
-                    RecursivelyParseDescriptions(schemaRegistry, prop.PropertyType);
+                    definition.properties[propertyInfo.Name].description = descriptionAttribute.Description;
                 }
+                else
+                {
+                    var jsonPropertyAttr = (JsonPropertyAttribute)propertyInfo.GetCustomAttributes(typeof(JsonPropertyAttribute), false).FirstOrDefault();
+                    if (jsonPropertyAttr != null && definition.properties.ContainsKey(jsonPropertyAttr.PropertyName))
+                    {
+                        definition.properties[jsonPropertyAttr.PropertyName].description = descriptionAttribute.Description;
+                    }
+                }
+            }
+            foreach (PropertyInfo propertyInfo in propType.GetProperties().Where(prop => prop.PropertyType.Assembly == propType.Assembly))
+            {
+                if (schemaRegistry.Definitions.ContainsKey(propertyInfo.Name))
+                    RecursivelyParseDescriptions(schemaRegistry, propertyInfo.PropertyType);
             }
         }
     }

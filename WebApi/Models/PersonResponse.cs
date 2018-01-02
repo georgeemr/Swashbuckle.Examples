@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using Newtonsoft.Json;
+using System.ComponentModel;
 
 namespace WebApi.Models
 {
@@ -9,8 +10,10 @@ namespace WebApi.Models
         public Title Title { get; set; }
 
         [Description("The first name of the person")]
+        [JsonPropertyAttribute("FName")]
         public string FirstName { get; set; }
 
+        [JsonPropertyAttribute("LName")]
         public string LastName { get; set; }
 
         [Description("His age, in years")]
